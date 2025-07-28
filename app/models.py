@@ -15,3 +15,17 @@ class Task(db.Model):
 
     def __repr__(self):
         return f'<Task {self.title}>'
+    
+    def to_dict(self):
+        def iso(val):
+            return val.isoformat() if hasattr(val, 'isoformat') else val
+        return {
+            'id': self.id,
+            'title': self.title,
+            'description': self.description,
+            'category': self.category,
+            'priority': self.priority,
+            'deadline': iso(self.deadline),
+            'created_at': iso(self.created_at),
+            'updated_at': iso(self.updated_at)
+        }
