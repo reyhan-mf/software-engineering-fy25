@@ -114,3 +114,10 @@ def update_task(id):
         'message': 'Task updated successfully',
         'task': task_schema.dump(task)
     })
+
+@bp.route('/tasks/<int:id>', methods=['DELETE'])
+def delete_task(id):
+    task = Task.query.get_or_404(id)
+    db.session.delete(task)
+    db.session.commit()
+    return jsonify({'message': 'Task deleted successfully'})
