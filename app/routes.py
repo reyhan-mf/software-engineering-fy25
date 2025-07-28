@@ -78,3 +78,8 @@ def get_tasks():
     if not tasks:
         return jsonify({'message': 'No tasks found'}), 404
     return jsonify(tasks_schema.dump(tasks))
+
+@bp.route('/tasks/<int:id>', methods=['GET'])
+def get_task(id):
+    task = Task.query.get_or_404(id)
+    return jsonify(task_schema.dump(task))
