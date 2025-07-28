@@ -72,6 +72,7 @@ def get_tasks():
     # Category and Priority: http://127.0.0.1:5000/tasks?category=Work&priority=High
     # Deadline: http://127.0.0.1:5000/tasks?deadline_from=2023-01-01&deadline_to=2023-12-31
     # Sorting Ascending: http://127.0.0.1:5000/tasks?sort_by=priority&order=asc
+    # Sorting Descending: http://127.0.0.1:5000/tasks?sort_by=priority&order=desc
 
     tasks = query.all()
     if not tasks:
