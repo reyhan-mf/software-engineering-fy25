@@ -87,7 +87,6 @@ def get_task(id):
     task = Task.query.get_or_404(id)
     return jsonify(task_schema.dump(task))
 
-
 @bp.route('/tasks/<int:id>', methods=['PUT'])
 def update_task(id):
     task = Task.query.get_or_404(id)
@@ -96,15 +95,18 @@ def update_task(id):
     if not data:
         return jsonify({'message': 'No input data provided'}), 400
 
-    errors = task_schema.validate(data)
+    errors = task_schema.validate(data, partial=True)
     if errors:
+        print("Validation errors:", errors)  # Debug print
         return jsonify({'message': 'Invalid input', 'errors': errors}), 400
 
-    task.title = data['title']
-    task.description = data.get('description')
-    task.category = data['category']
-    task.priority = data['priority']
-    task.deadline = parse_datetime(data['deadline'])
+    allowed_fields = ['title', 'description', 'category', 'priority', 'deadline']
+    for field in allowed_fields:
+        if field in data:
+            if field == 'deadline':
+                setattr(task, field, parse_datetime(data[field]))
+            else:
+                setattr(task, field, data[field])
 
     db.session.commit()
 
