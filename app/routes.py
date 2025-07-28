@@ -43,54 +43,84 @@ def create_task():
 # Get with filter
 @bp.route('/tasks', methods=['GET'])
 def get_tasks():
-    # Get query parameters
-    category = request.args.get('category')
-    priority = request.args.get('priority')
-    deadline_from = request.args.get('deadline_from')
-    deadline_to = request.args.get('deadline_to')
-    sort_by = request.args.get('sort_by', 'created_at')
-    order = request.args.get('order', 'desc')
+    try:
+        # Get query parameters
+        category = request.args.get('category')
+        priority = request.args.get('priority')
+        deadline_from = request.args.get('deadline_from')
+        deadline_to = request.args.get('deadline_to')
+        sort_by = request.args.get('sort_by', 'created_at')
+        order = request.args.get('order', 'desc')
 
-    query = Task.query
+        # Validate sort_by field exists
+        if not hasattr(Task, sort_by):
+            return jsonify({
+                'message': f'Invalid sort field: {sort_by}. '
+                'Available fields: title, category, priority, deadline, created_at'
+            }), 400
 
-    # Filtering
-    if category:
-        query = query.filter(Task.category == category)
-    if priority:
-        query = query.filter(Task.priority == priority)
-    if deadline_from:
-        from_dt = parse_datetime(deadline_from)
-        query = query.filter(Task.deadline >= from_dt)
-    if deadline_to:
-        to_dt = parse_datetime(deadline_to)
-        query = query.filter(Task.deadline <= to_dt)
+        query = Task.query
 
-    sort_column = getattr(Task, sort_by, Task.created_at)
-    if order == 'desc':
-        query = query.order_by(desc(sort_column))
-    else:
-        query = query.order_by(sort_column)
+        # Filtering
+        if category:
+            query = query.filter(Task.category == category)
+        if priority:
+            query = query.filter(Task.priority == priority)
+        if deadline_from:
+            try:
+                from_dt = parse_datetime(deadline_from)
+                query = query.filter(Task.deadline >= from_dt)
+            except ValueError as e:
+                return jsonify({'message': str(e)}), 400
+        if deadline_to:
+            try:
+                to_dt = parse_datetime(deadline_to)
+                query = query.filter(Task.deadline <= to_dt)
+            except ValueError as e:
+                return jsonify({'message': str(e)}), 400
 
-    # Category and Priority: http://127.0.0.1:5000/tasks?category=Work&priority=High
-    # Deadline: http://127.0.0.1:5000/tasks?deadline_from=2023-01-01&deadline_to=2023-12-31
-    # Sorting Ascending: http://127.0.0.1:5000/tasks?sort_by=priority&order=asc
-    # Sorting Descending: http://127.0.0.1:5000/tasks?sort_by=priority&order=desc
+        # Sorting
+        sort_column = getattr(Task, sort_by)
+        if order.lower() not in ['asc', 'desc']:
+            return jsonify({
+                'message': 'Invalid order value. Use "asc" or "desc"'
+            }), 400
+            
+        query = query.order_by(desc(sort_column) if order.lower() == 'desc' else sort_column)
 
-    tasks = query.all()
-    if not tasks:
-        return jsonify({'message': 'No tasks found'}), 404
-    return jsonify(tasks_schema.dump(tasks))
+        tasks = query.all()
+        if not tasks:
+            return jsonify({
+                'message': 'No tasks found matching the criteria',
+                'data': []
+            }), 200  # Return 200 with empty list instead of 404
+            
+        return jsonify({
+            'message': 'Tasks retrieved successfully',
+            'data': tasks_schema.dump(tasks)
+        })
 
+    except Exception as e:
+        return jsonify({
+            'message': 'An error occurred while processing your request',
+            'error': str(e)
+        }), 500
+    
 # Get by ID
 @bp.route('/tasks/<int:id>', methods=['GET'])
 def get_task(id):
-    task = Task.query.get_or_404(id)
+    task = db.session.get(Task, id)
+    if not task:
+        return jsonify({'message': 'Task not found'}), 404
     return jsonify(task_schema.dump(task))
 
 @bp.route('/tasks/<int:id>', methods=['PUT'])
 def update_task(id):
-    task = Task.query.get_or_404(id)
+    task = db.session.get(Task, id)
     data = request.get_json()
+
+    if not task:
+        return jsonify({'message': 'Task not found'}), 404
 
     if not data:
         return jsonify({'message': 'No input data provided'}), 400
@@ -117,7 +147,9 @@ def update_task(id):
 
 @bp.route('/tasks/<int:id>', methods=['DELETE'])
 def delete_task(id):
-    task = Task.query.get_or_404(id)
+    task = db.session.get(Task, id)
+    if not task:
+        return jsonify({'message': 'Task not found'}), 404
     db.session.delete(task)
     db.session.commit()
     return jsonify({'message': 'Task deleted successfully'})

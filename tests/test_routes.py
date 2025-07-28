@@ -77,3 +77,50 @@ def test_get_tasks_with_filters(client):
     assert response.status_code == 200
     assert len(response.get_json()) == 1
     assert response.get_json()[0]['category'] == 'Work'
+
+
+def test_get_task_by_id(client):
+    task = Task(title='Task1', description='Desc', category='Work', priority='High', deadline=datetime(2025, 12, 31, 23, 59, 59))
+    db.session.add(task)
+    db.session.commit()
+    response = client.get(f'/tasks/{task.id}')
+    assert response.status_code == 200
+    assert response.get_json()['title'] == 'Task1'
+
+
+def test_update_task(client):
+    task = Task(title='Task1', description='Desc', category='Work', priority='High', deadline=datetime(2025, 12, 31, 23, 59, 59))
+    db.session.add(task)
+    db.session.commit()
+    update_data = {'title': 'Updated Task', 'priority': 'Low'}
+    response = client.put(f'/tasks/{task.id}', json=update_data)
+    assert response.status_code == 200
+    assert response.get_json()['task']['title'] == 'Updated Task'
+    assert response.get_json()['task']['priority'] == 'Low'
+
+def test_update_task_invalid(client):
+    task = Task(title='Task1', description='Desc', category='Work', priority='High', deadline=datetime(2025, 12, 31, 23, 59, 59))
+    db.session.add(task)
+    db.session.commit()
+    response = client.put(f'/tasks/{task.id}', json={'deadline': 'invalid-date'})
+    assert response.status_code == 400
+    assert 'Invalid input' in response.get_json()['message']
+
+def test_update_task_no_data(client):
+    task = Task(title='Task1', description='Desc', category='Work', priority='High', deadline=datetime(2025, 12, 31, 23, 59, 59))
+    db.session.add(task)
+    db.session.commit()
+    response = client.put(f'/tasks/{task.id}', json={})
+    assert response.status_code == 400
+    assert 'No input data provided' in response.get_json()['message']
+
+
+def test_delete_task(client):
+    task = Task(title='Task1', description='Desc', category='Work', priority='High', deadline=datetime(2025, 12, 31, 23, 59, 59), created_at=datetime(2025, 12, 31, 23, 59, 59))
+    db.session.add(task)
+    db.session.commit()
+    response = client.delete(f'/tasks/{task.id}')
+    assert response.status_code == 200
+    assert 'Task deleted successfully' in response.get_json()['message']
+
+
