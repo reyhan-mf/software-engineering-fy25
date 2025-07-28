@@ -12,6 +12,7 @@ bp = Blueprint('tasks', __name__)
 def index():
     return jsonify({'message': 'Welcome to the Task Management API'})
 
+# Insert tasks to database
 @bp.route('/tasks', methods=['POST'])
 def create_task():
     data = request.get_json()
@@ -39,6 +40,7 @@ def create_task():
         'task': task_schema.dump(task)
     }), 201
 
+# Get with filter
 @bp.route('/tasks', methods=['GET'])
 def get_tasks():
     # Get query parameters
@@ -79,7 +81,34 @@ def get_tasks():
         return jsonify({'message': 'No tasks found'}), 404
     return jsonify(tasks_schema.dump(tasks))
 
+# Get by ID
 @bp.route('/tasks/<int:id>', methods=['GET'])
 def get_task(id):
     task = Task.query.get_or_404(id)
     return jsonify(task_schema.dump(task))
+
+
+@bp.route('/tasks/<int:id>', methods=['PUT'])
+def update_task(id):
+    task = Task.query.get_or_404(id)
+    data = request.get_json()
+
+    if not data:
+        return jsonify({'message': 'No input data provided'}), 400
+
+    errors = task_schema.validate(data)
+    if errors:
+        return jsonify({'message': 'Invalid input', 'errors': errors}), 400
+
+    task.title = data['title']
+    task.description = data.get('description')
+    task.category = data['category']
+    task.priority = data['priority']
+    task.deadline = parse_datetime(data['deadline'])
+
+    db.session.commit()
+
+    return jsonify({
+        'message': 'Task updated successfully',
+        'task': task_schema.dump(task)
+    })
