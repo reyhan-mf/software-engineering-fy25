@@ -4,6 +4,8 @@ from app.models import Task
 from app.schemas import task_schema
 from sqlalchemy import desc
 
+from app.utils import parse_datetime
+
 bp = Blueprint('tasks', __name__)
 
 @bp.route('/test', methods=['POST'])
@@ -26,7 +28,7 @@ def create_task():
         description=data.get('description'),
         category=data['category'],
         priority=data['priority'],
-        deadline=data['deadline']
+        deadline=parse_datetime(data['deadline'])
     )
 
     db.session.add(task)
